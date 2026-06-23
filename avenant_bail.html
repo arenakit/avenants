@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avenant – Changement de titulaire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0d1117;
+  --panel: #161b22;
+  --panel-2: #1c2333;
+  --border: #30363d;
+  --border-soft: #21262d;
+  --gold: #f0b429;
+  --gold-dim: #a07820;
+  --gold-glow: rgba(240,180,41,0.15);
+  --green: #3fb950;
+  --green-dim: rgba(63,185,80,0.12);
+  --blue-acc: #58a6ff;
+  --red: #f85149;
+  --purple: #a78bfa;
+  --purple-dim: rgba(167,139,250,0.12);
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+  --white: #ffffff;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --font-display: 'Syne', sans-serif;
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-doc: 'Georgia', serif;
+  --shadow-panel: 0 0 0 1px rgba(255,255,255,0.04), 0 8px 32px rgba(0,0,0,0.4);
+  --shadow-doc: 0 0 0 1px rgba(255,255,255,0.06), 0 24px 64px rgba(0,0,0,0.6);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-ui);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== PROGRESS BAR ===== */
+#progress-bar {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold), #ff9f43);
+  z-index: 9999;
+  transition: width 0.4s cubic-bezier(0.4,0,0.2,1);
+  box-shadow: 0 0 12px rgba(240,180,41,0.6);
+}
+
+/* ===== HEADER ===== */
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(13,17,23,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 28px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.header-icon {
+  width: 34px;
+  height: 34px;
+  background: linear-gradient(135deg, var(--gold) 0%, #ff9f43 100%);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(240,180,41,0.3);
+}
+.header-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.header-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+.header-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* Progress dots */
+.completude-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 6px 14px;
+}
+.completude-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.completude-dots { display: flex; gap: 5px; }
+.cdot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.3s, box-shadow 0.3s, transform 0.2s;
+}
+.cdot.ok {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(63,185,80,0.5);
+  transform: scale(1.15);
+}
+
+/* Save status */
+#save-status {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+#save-status .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+#save-status.saved .dot {
+  background: var(--green);
+  box-shadow: 0 0 6px rgba(63,185,80,0.6);
+}
+
+.header-actions { display: flex; align-items: center; gap: 8px; }
+
+.btn-ghost {
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+.btn-ghost:hover { background: var(--panel-2); color: var(--text); border-color: #484f58; }
+
+.btn-primary {
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  cursor: pointer;
+  border: none;
+  background: linear-gradient(135deg, var(--gold) 0%, #e8a020 100%);
+  color: #0d0a00;
+  letter-spacing: 0.02em;
+  transition: all 0.15s;
+  box-shadow: 0 2px 12px rgba(240,180,41,0.3);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.btn-primary:hover {
+  box-shadow: 0 4px 20px rgba(240,180,41,0.5);
+  transform: translateY(-1px);
+}
+.btn-primary:active { transform: translateY(0); }
+
+/* ===== LAYOUT ===== */
+.main-layout {
+  display: grid;
+  grid-template-columns: 390px 1fr;
+  min-height: calc(100vh - 60px);
+}
+
+/* ===== FORM PANEL ===== */
+.form-panel {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  max-height: calc(100vh - 60px);
+  position: sticky;
+  top: 60px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.form-panel::-webkit-scrollbar { width: 4px; }
+.form-panel::-webkit-scrollbar-track { background: transparent; }
+.form-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.form-panel-inner { padding: 22px 20px 32px; }
+
+/* Section labels */
+.section-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  margin-top: 24px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.section-label:first-child { margin-top: 0; }
+
+.field-group { margin-bottom: 10px; }
+
+label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 5px;
+  letter-spacing: 0.02em;
+}
+
+input[type="text"], input[type="date"] {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-ui);
+  color: var(--text);
+  background: var(--bg);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+  outline: none;
+  color-scheme: dark;
+}
+input[type="text"]::placeholder { color: var(--text-dim); }
+input[type="text"]:focus, input[type="date"]:focus {
+  border-color: var(--gold-dim);
+  box-shadow: 0 0 0 3px var(--gold-glow);
+  background: #0f1419;
+}
+input.filled {
+  border-color: #1f4a26;
+  background: rgba(63,185,80,0.04);
+}
+input.filled:focus {
+  border-color: #2ea043;
+  box-shadow: 0 0 0 3px rgba(63,185,80,0.1);
+}
+
+.inline-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* ===== PROPRIO ===== */
+.proprio-row { display: flex; gap: 6px; }
+.proprio-row input { flex: 1; }
+.btn-star {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-dim);
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-star:hover { border-color: var(--gold-dim); color: var(--gold); background: var(--gold-glow); }
+
+.proprio-saved { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.proprio-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(240,180,41,0.08);
+  border: 1px solid rgba(240,180,41,0.2);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #c8952a;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.proprio-chip:hover { background: rgba(240,180,41,0.16); border-color: var(--gold-dim); color: var(--gold); }
+.chip-del {
+  color: var(--text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0 1px;
+  line-height: 1;
+}
+.chip-del:hover { color: var(--red); }
+
+/* ===== IMPORT RAPIDE ===== */
+.import-box {
+  background: var(--purple-dim);
+  border: 1px solid rgba(167,139,250,0.2);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 4px;
+}
+.import-box > label {
+  color: var(--purple);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.import-target-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+.import-select {
+  flex: 1;
+  padding: 7px 10px;
+  background: var(--bg);
+  border: 1px solid rgba(167,139,250,0.3);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  color-scheme: dark;
+  outline: none;
+}
+.import-select:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(167,139,250,0.15); }
+.import-row { display: flex; gap: 6px; }
+.import-input {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--bg);
+  border: 1px solid rgba(167,139,250,0.25);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font-ui);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.import-input::placeholder { color: var(--text-dim); }
+.import-input:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(167,139,250,0.12); }
+.btn-import {
+  padding: 8px 14px;
+  background: var(--purple);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: white;
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: var(--font-display);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-import:hover { background: #9370f5; box-shadow: 0 0 12px rgba(167,139,250,0.3); }
+.import-hint { font-size: 10px; color: rgba(167,139,250,0.55); margin-top: 6px; font-style: italic; }
+
+/* ===== PERSON BLOCKS ===== */
+.person-block {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 8px;
+  transition: border-color 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.person-block::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: var(--blue-acc);
+  border-radius: 0 2px 2px 0;
+}
+.person-block.entrant::before { background: var(--green); }
+.person-block.caution::before { background: var(--gold); }
+.person-block:hover { border-color: #484f58; }
+
+.person-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-left: 8px;
+}
+.person-title {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--blue-acc);
+}
+.person-block.entrant .person-title { color: var(--green); }
+.person-block.caution .person-title { color: var(--gold); }
+
+.btn-remove {
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 13px;
+  width: 24px; height: 24px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.btn-remove:hover { color: var(--red); border-color: rgba(248,81,73,0.3); background: rgba(248,81,73,0.08); }
+
+.btn-add {
+  width: 100%;
+  padding: 8px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 2px;
+}
+.btn-add:hover {
+  border-color: var(--blue-acc);
+  color: var(--blue-acc);
+  background: rgba(88,166,255,0.06);
+}
+.btn-add.add-entrant:hover { border-color: var(--green); color: var(--green); background: rgba(63,185,80,0.06); }
+.btn-add.add-caution:hover { border-color: var(--gold); color: var(--gold); background: var(--gold-glow); }
+
+.civilite-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-family: var(--font-ui);
+  color: var(--text);
+  background: var(--bg);
+  appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+  color-scheme: dark;
+}
+.civilite-select:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 3px var(--gold-glow); }
+
+/* ===== PREVIEW PANEL ===== */
+.preview-panel {
+  background: #0a0e14;
+  padding: 28px 32px;
+  overflow-y: auto;
+  max-height: calc(100vh - 60px);
+}
+
+.preview-label {
+  font-family: var(--font-display);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.preview-label::after { content: ''; flex: 1; height: 1px; background: var(--border-soft); }
+.preview-label .live-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: var(--green);
+  letter-spacing: 0.1em;
+}
+.live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse-dot 2s infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ===== DOCUMENT ===== */
+.doc-wrapper {
+  background: var(--white);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-doc);
+  max-width: 740px;
+  margin: 0 auto;
+  transition: box-shadow 0.3s;
+}
+.doc-wrapper:hover {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.08), 0 32px 80px rgba(0,0,0,0.7);
+}
+
+#doc-content {
+  font-family: var(--font-doc);
+  font-size: 11pt;
+  line-height: 1.65;
+  color: #111;
+  padding: 56px 68px;
+}
+#doc-content h1 {
+  text-align: center;
+  font-size: 13.5pt;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+}
+#doc-content .doc-ref {
+  text-align: center;
+  font-size: 10pt;
+  font-style: italic;
+  color: #444;
+  margin-bottom: 24px;
+}
+#doc-content p { margin-bottom: 12px; text-align: justify; }
+#doc-content .section-title {
+  font-weight: bold;
+  font-size: 10pt;
+  margin-top: 18px;
+  margin-bottom: 5px;
+  text-decoration: underline;
+}
+#doc-content .blank { color: #c00; font-style: italic; }
+#doc-content .signatures-section {
+  margin-top: 32px;
+  border-top: 2px solid #222;
+  padding-top: 16px;
+}
+#doc-content .sig-intro { font-size: 10pt; font-style: italic; margin-bottom: 14px; }
+#doc-content .sig-table { width: 100%; border-collapse: separate; border-spacing: 7px 7px; }
+#doc-content .sig-block {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 9.5pt;
+  background: #fafafa;
+  vertical-align: top;
+  width: 50%;
+}
+#doc-content .sig-mandataire { background: #f0f3fa; border-color: #aab; }
+#doc-content .sig-role { font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.08em; color: #777; margin-bottom: 2px; }
+#doc-content .sig-name { font-weight: bold; font-size: 10pt; margin-bottom: 2px; }
+#doc-content .sig-instruction { font-size: 8pt; color: #555; font-style: italic; margin-bottom: 6px; }
+#doc-content .sig-line { height: 48px; border-bottom: 1.5px solid #999; margin-top: 4px; }
+#doc-content .rgpd { font-size: 8pt; color: #444; line-height: 1.5; padding-top: 18px; }
+#doc-content .rgpd p { margin-bottom: 8px; text-align: justify; }
+#doc-content .consent-block { margin-top: 14px; border-top: 1px solid #ddd; padding-top: 10px; }
+#doc-content .consent-line {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 10px;
+  font-size: 8.5pt;
+  padding: 9px 11px;
+  border: 1px solid #e0d0a0;
+  border-radius: 4px;
+  background: #fffdf5;
+}
+#doc-content .checkbox-square {
+  width: 12px; height: 12px;
+  border: 1.5px solid #555;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: inline-block;
+}
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 28px 32px;
+  max-width: 380px;
+  width: 90%;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 32px 80px rgba(0,0,0,0.6);
+  animation: modal-in 0.2s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes modal-in {
+  from { transform: scale(0.92) translateY(10px); opacity: 0; }
+  to { transform: scale(1) translateY(0); opacity: 1; }
+}
+.modal h2 {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.modal p { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-cancel {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-family: var(--font-ui);
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+.btn-cancel:hover { background: var(--panel-2); color: var(--text); }
+.btn-confirm-reset {
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--red);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-confirm-reset:hover { background: #da3e3e; box-shadow: 0 0 12px rgba(248,81,73,0.3); }
+
+/* ===== PRINT ===== */
+@media print {
+  @page { margin: 14mm 16mm; }
+  body { background: white; }
+  #progress-bar, .app-header, .form-panel, .preview-label, .preview-panel > *:not(.doc-wrapper), .modal-overlay { display: none !important; }
+  .main-layout { display: block; }
+  .preview-panel { padding: 0; max-height: none; overflow: visible; background: white; }
+  .doc-wrapper { box-shadow: none; border-radius: 0; max-width: 100%; }
+  #doc-content { padding: 0; font-size: 9.5pt; line-height: 1.45; }
+  #doc-content h1 { font-size: 11.5pt; margin-bottom: 4px; }
+  #doc-content .doc-ref { margin-bottom: 14px; font-size: 9pt; }
+  #doc-content p { margin-bottom: 7px; }
+  #doc-content .blank { color: #000; font-style: normal; }
+  #doc-content .section-title { margin-top: 10px; margin-bottom: 3px; }
+  #doc-content .signatures-section { margin-top: 16px; padding-top: 10px; border-top: 1.5px solid #222; page-break-inside: avoid; }
+  #doc-content .sig-intro { margin-bottom: 8px; font-size: 9pt; }
+  #doc-content .sig-table { border-spacing: 5px 5px; }
+  #doc-content .sig-block { padding: 5px 8px; border: 1px solid #bbb; background: white !important; font-size: 8.5pt; }
+  #doc-content .sig-mandataire { background: white !important; }
+  #doc-content .sig-role { font-size: 6.5pt; }
+  #doc-content .sig-name { font-size: 9pt; }
+  #doc-content .sig-instruction { font-size: 7pt; margin-bottom: 2px; }
+  #doc-content .sig-line { height: 30px; border-bottom: 1px solid #999; margin-top: 2px; }
+  #doc-content .rgpd { page-break-before: always; font-size: 7.5pt; line-height: 1.4; }
+  #doc-content .rgpd p { margin-bottom: 5px; }
+  #doc-content .consent-line { padding: 5px 8px; margin-top: 6px; font-size: 7.5pt; }
+  #doc-content .checkbox-square { width: 10px; height: 10px; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-reset">
+  <div class="modal">
+    <h2>Nouveau dossier</h2>
+    <p>Tous les champs vont être effacés. Le dossier en cours sera perdu et non récupérable.</p>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Annuler</button>
+      <button class="btn-confirm-reset" onclick="confirmReset()">Effacer et recommencer</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="header-brand">
+    <div class="header-icon">📄</div>
+    <div>
+      <div class="header-title">Générateur d'avenant</div>
+      <div class="header-sub">Changement de titulaire · Bail habitation</div>
+    </div>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div id="save-status">
+      <span class="dot"></span>
+      <span id="save-text">En attente</span>
+    </div>
+    <div class="header-divider"></div>
+    <div class="completude-wrap">
+      <span class="completude-label">Complet</span>
+      <div class="completude-dots" id="completude-dots"></div>
+    </div>
+    <div class="header-divider"></div>
+    <div class="header-actions">
+      <button class="btn-ghost" onclick="openModal()">＋ Nouveau dossier</button>
+      <button class="btn-primary" onclick="printDoc()" title="Ctrl+P">
+        <span>🖨</span> Imprimer
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="main-layout">
+
+  <!-- FORMULAIRE -->
+  <div class="form-panel">
+    <div class="form-panel-inner">
+
+      <div class="section-label">Infos dossier</div>
+
+      <div class="field-group">
+        <label>Propriétaire · bailleur</label>
+        <div class="proprio-row">
+          <input type="text" id="proprio" placeholder="ex. PASQUEREAU Thierry" oninput="refresh(); updateTitle()">
+          <button class="btn-star" onclick="saveProprio()" title="Mémoriser">⭐</button>
+        </div>
+        <div class="proprio-saved" id="proprio-saved"></div>
+      </div>
+
+      <div class="inline-grid">
+        <div class="field-group">
+          <label>N° de lot</label>
+          <input type="text" id="lot" placeholder="ex. 42" oninput="refresh(); updateTitle()">
+        </div>
+        <div class="field-group">
+          <label>Date de prise d'effet</label>
+          <input type="date" id="date_effet" oninput="refresh()">
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Date d'expiration du bail</label>
+        <input type="date" id="date_expiration" oninput="refresh()">
+      </div>
+      <div class="field-group">
+        <label>Date de signature du bail initial</label>
+        <input type="date" id="date_bail" oninput="refresh()">
+      </div>
+      <div class="field-group">
+        <label>Adresse du bien</label>
+        <input type="text" id="adresse" placeholder="ex. 2 Montée Tire Jarret, ANGERS 49100" oninput="refresh()">
+      </div>
+
+      <div class="section-label">⚡ Import rapide</div>
+      <div class="import-box">
+        <label>Coller une ligne · remplissage automatique</label>
+        <div class="import-target-row">
+          <select class="import-select" id="import-target">
+            <option value="sortant">→ Sortant</option>
+            <option value="entrant">→ Entrant</option>
+            <option value="caution">→ Caution</option>
+          </select>
+        </div>
+        <div class="import-row">
+          <input type="text" class="import-input" id="import-input" placeholder="DUPONT Jean 15/03/1990 Paris">
+          <button class="btn-import" onclick="importLine()">Importer</button>
+        </div>
+        <div class="import-hint">Format : NOM Prénom JJ/MM/AAAA Ville (dans n'importe quel ordre)</div>
+      </div>
+
+      <div class="section-label">Titulaires sortants</div>
+      <div id="sortants-list"></div>
+      <button class="btn-add" id="btn-add-sortant" onclick="addPerson('sortant')">+ Ajouter un sortant</button>
+
+      <div class="section-label">Nouveaux titulaires entrants</div>
+      <div id="entrants-list"></div>
+      <button class="btn-add add-entrant" id="btn-add-entrant" onclick="addPerson('entrant')">+ Ajouter un entrant</button>
+
+      <div class="section-label">Caution(s) solidaire(s) <span style="color:var(--text-dim);font-weight:400;font-family:var(--font-ui);text-transform:none;letter-spacing:0;font-size:10px;">(optionnel)</span></div>
+      <div id="cautions-list"></div>
+      <button class="btn-add add-caution" onclick="addPerson('caution')">+ Ajouter une caution</button>
+
+    </div>
+  </div>
+
+  <!-- APERÇU -->
+  <div class="preview-panel">
+    <div class="preview-label">
+      Aperçu du document
+      <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+    </div>
+    <div class="doc-wrapper">
+      <div id="doc-content"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ========== STATE ==========
+const state = { sortants: [], entrants: [], cautions: [] };
+let sortantCounter = 0, entrantCounter = 0, cautionCounter = 0;
+let saveTimeout = null;
+
+// ========== LOCALSTORAGE ==========
+const LS_KEY = 'avenant_state_v2';
+const LS_PROPRIOS = 'avenant_proprios_v1';
+
+function saveToLS() {
+  const data = {
+    proprio: document.getElementById('proprio').value,
+    lot: document.getElementById('lot').value,
+    date_effet: document.getElementById('date_effet').value,
+    date_expiration: document.getElementById('date_expiration').value,
+    date_bail: document.getElementById('date_bail').value,
+    adresse: document.getElementById('adresse').value,
+    sortants: state.sortants,
+    entrants: state.entrants,
+    cautions: state.cautions,
+    sortantCounter, entrantCounter, cautionCounter
+  };
+  localStorage.setItem(LS_KEY, JSON.stringify(data));
+  showSaved();
+}
+
+function showSaved() {
+  const el = document.getElementById('save-status');
+  const txt = document.getElementById('save-text');
+  txt.textContent = 'Sauvegardé';
+  el.classList.add('saved');
+}
+
+function loadFromLS() {
+  const raw = localStorage.getItem(LS_KEY);
+  if (!raw) return false;
+  try {
+    const data = JSON.parse(raw);
+    document.getElementById('proprio').value = data.proprio || '';
+    document.getElementById('lot').value = data.lot || '';
+    document.getElementById('date_effet').value = data.date_effet || '';
+    document.getElementById('date_expiration').value = data.date_expiration || '';
+    document.getElementById('date_bail').value = data.date_bail || '';
+    document.getElementById('adresse').value = data.adresse || '';
+    state.sortants = data.sortants || [];
+    state.entrants = data.entrants || [];
+    state.cautions = data.cautions || [];
+    sortantCounter = data.sortantCounter || 0;
+    entrantCounter = data.entrantCounter || 0;
+    cautionCounter = data.cautionCounter || 0;
+    return true;
+  } catch(e) { return false; }
+}
+
+// ========== PROPRIOS ==========
+function getProprios() {
+  try { return JSON.parse(localStorage.getItem(LS_PROPRIOS)) || []; }
+  catch(e) { return []; }
+}
+function saveProprios(arr) { localStorage.setItem(LS_PROPRIOS, JSON.stringify(arr)); }
+
+function saveProprio() {
+  const val = document.getElementById('proprio').value.trim();
+  if (!val) return;
+  const arr = getProprios();
+  if (arr.includes(val)) return;
+  arr.unshift(val);
+  if (arr.length > 10) arr.pop();
+  saveProprios(arr);
+  renderProprios();
+}
+function loadProprio(val) {
+  document.getElementById('proprio').value = val;
+  refresh(); updateTitle(); debounceSave();
+}
+function deleteProprio(val, e) {
+  e.stopPropagation();
+  saveProprios(getProprios().filter(p => p !== val));
+  renderProprios();
+}
+function renderProprios() {
+  const arr = getProprios();
+  document.getElementById('proprio-saved').innerHTML = arr.map(p => `
+    <span class="proprio-chip" onclick="loadProprio('${p.replace(/'/g,"\\'")}')">
+      ${p}<span class="chip-del" onclick="deleteProprio('${p.replace(/'/g,"\\'")}',event)">✕</span>
+    </span>`).join('');
+}
+
+// ========== IMPORT ==========
+function importLine() {
+  const raw = document.getElementById('import-input').value.trim();
+  const target = document.getElementById('import-target').value;
+  if (!raw) return;
+  const dateMatch = raw.match(/\b(\d{2})[\/\-\.](\d{2})[\/\-\.](\d{4})\b/);
+  let naissance = '', reste = raw;
+  if (dateMatch) {
+    naissance = `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`;
+    reste = reste.replace(dateMatch[0], '').trim();
+  }
+  const words = reste.split(/\s+/).filter(Boolean);
+  let nom = '', prenom = '', lieu = '';
+  const upper = words.filter(w => w === w.toUpperCase() && w.length > 1);
+  const mixed = words.filter(w => w !== w.toUpperCase() || w.length === 1);
+  if (upper.length > 0) {
+    nom = upper.join(' ');
+    if (mixed.length > 0) {
+      lieu = mixed.length > 1 ? mixed[mixed.length - 1] : '';
+      prenom = mixed.slice(0, lieu ? mixed.length - 1 : mixed.length).join(' ');
+    }
+  } else {
+    if (words.length >= 3) { nom = words[0]; prenom = words[1]; lieu = words.slice(2).join(' '); }
+    else if (words.length === 2) { nom = words[0]; prenom = words[1]; }
+    else { nom = words[0] || ''; }
+  }
+  if (!lieu && !dateMatch && words.length >= 3) lieu = words[words.length - 1];
+  addPerson(target, { nom: nom.trim(), prenom: prenom.trim(), naissance, lieuNaissance: lieu.trim() });
+  document.getElementById('import-input').value = '';
+}
+
+// ========== MODAL ==========
+function openModal() { document.getElementById('modal-reset').classList.add('open'); }
+function closeModal() { document.getElementById('modal-reset').classList.remove('open'); }
+function confirmReset() { closeModal(); resetAll(); }
+function resetAll() {
+  state.sortants = []; state.entrants = []; state.cautions = [];
+  sortantCounter = 0; entrantCounter = 0; cautionCounter = 0;
+  ['proprio','lot','date_effet','date_expiration','date_bail','adresse'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('btn-add-sortant').style.display = '';
+  document.getElementById('btn-add-entrant').style.display = '';
+  addPerson('sortant'); addPerson('entrant');
+  saveToLS(); updateTitle();
+}
+
+// ========== TITLE ==========
+function updateTitle() {
+  const proprio = document.getElementById('proprio').value;
+  const lot = document.getElementById('lot').value;
+  let title = 'Avenant – Changement de titulaire';
+  if (lot && proprio) title = `LOT ${lot} · ${proprio}`;
+  else if (lot) title = `LOT ${lot}`;
+  else if (proprio) title = proprio;
+  document.title = title;
+}
+
+// ========== COMPLETUDE ==========
+const REQUIRED_FIELDS = [
+  { id: 'proprio', label: 'Propriétaire' },
+  { id: 'lot', label: 'N° de lot' },
+  { id: 'date_effet', label: "Date d'effet" },
+  { id: 'date_expiration', label: 'Date expiration' },
+  { id: 'date_bail', label: 'Date bail initial' },
+  { id: 'adresse', label: 'Adresse' },
+];
+
+function updateCompletude() {
+  const results = REQUIRED_FIELDS.map(f => ({
+    label: f.label, ok: !!document.getElementById(f.id).value.trim()
+  }));
+  results.push({ label: 'Sortant', ok: state.sortants.some(p => p.nom && p.prenom) });
+  results.push({ label: 'Entrant', ok: state.entrants.some(p => p.nom && p.prenom) });
+
+  const done = results.filter(r => r.ok).length;
+  const pct = Math.round((done / results.length) * 100);
+  document.getElementById('progress-bar').style.width = pct + '%';
+  document.getElementById('completude-dots').innerHTML = results.map(r =>
+    `<span class="cdot ${r.ok ? 'ok' : ''}" title="${r.label}"></span>`).join('');
+}
+
+// ========== PERSONS ==========
+function addPerson(type, prefill = {}) {
+  const limits = { sortant: 4, entrant: 4, caution: 10 };
+  if (state[type + 's'].length >= limits[type]) return;
+  let id;
+  if (type === 'sortant') id = ++sortantCounter;
+  else if (type === 'entrant') id = ++entrantCounter;
+  else id = ++cautionCounter;
+  state[type + 's'].push({ id, civilite: prefill.civilite || 'Madame', nom: prefill.nom || '', prenom: prefill.prenom || '', naissance: prefill.naissance || '', lieuNaissance: prefill.lieuNaissance || '' });
+  renderPersons(type); refresh(); debounceSave();
+  if (type === 'sortant' && state.sortants.length >= 4) document.getElementById('btn-add-sortant').style.display = 'none';
+  if (type === 'entrant' && state.entrants.length >= 4) document.getElementById('btn-add-entrant').style.display = 'none';
+}
+
+function removePerson(type, id) {
+  state[type + 's'] = state[type + 's'].filter(p => p.id !== id);
+  renderPersons(type); refresh(); debounceSave();
+  if (type === 'sortant') document.getElementById('btn-add-sortant').style.display = '';
+  if (type === 'entrant') document.getElementById('btn-add-entrant').style.display = '';
+}
+
+function renderPersons(type) {
+  const arr = state[type + 's'];
+  const container = document.getElementById(type + 's-list');
+  const cssClass = type === 'entrant' ? 'entrant' : type === 'caution' ? 'caution' : '';
+  const labels = { sortant: 'Sortant', entrant: 'Entrant', caution: 'Caution' };
+  container.innerHTML = arr.map((p, i) => `
+    <div class="person-block ${cssClass}">
+      <div class="person-header">
+        <span class="person-title">${labels[type]}${arr.length > 1 ? ' ' + (i+1) : ''}</span>
+        <button class="btn-remove" onclick="removePerson('${type}',${p.id})">✕</button>
+      </div>
+      <div class="field-group">
+        <label>Civilité</label>
+        <select class="civilite-select" onchange="updatePerson('${type}',${p.id},'civilite',this.value)">
+          <option value="Madame" ${p.civilite==='Madame'?'selected':''}>Madame</option>
+          <option value="Monsieur" ${p.civilite==='Monsieur'?'selected':''}>Monsieur</option>
+        </select>
+      </div>
+      <div class="inline-grid">
+        <div class="field-group">
+          <label>Nom</label>
+          <input type="text" value="${escHtml(p.nom)}" placeholder="NOM" oninput="updatePerson('${type}',${p.id},'nom',this.value)" class="${p.nom?'filled':''}">
+        </div>
+        <div class="field-group">
+          <label>Prénom</label>
+          <input type="text" value="${escHtml(p.prenom)}" placeholder="Prénom" oninput="updatePerson('${type}',${p.id},'prenom',this.value)" class="${p.prenom?'filled':''}">
+        </div>
+      </div>
+      <div class="inline-grid">
+        <div class="field-group">
+          <label>Date de naissance</label>
+          <input type="date" value="${p.naissance}" oninput="updatePerson('${type}',${p.id},'naissance',this.value)" class="${p.naissance?'filled':''}">
+        </div>
+        <div class="field-group">
+          <label>Lieu de naissance</label>
+          <input type="text" value="${escHtml(p.lieuNaissance)}" placeholder="Ville" oninput="updatePerson('${type}',${p.id},'lieuNaissance',this.value)" class="${p.lieuNaissance?'filled':''}">
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function updatePerson(type, id, field, value) {
+  const p = state[type + 's'].find(x => x.id === id);
+  if (p) { p[field] = value; refresh(); debounceSave(); }
+}
+
+function debounceSave() {
+  const txt = document.getElementById('save-text');
+  txt.textContent = 'Modification…';
+  document.getElementById('save-status').classList.remove('saved');
+  clearTimeout(saveTimeout);
+  saveTimeout = setTimeout(saveToLS, 800);
+}
+
+// ========== HELPERS ==========
+function escHtml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+function fmtDate(val) {
+  if (!val) return null;
+  const [y,m,d] = val.split('-');
+  return `${d}/${m}/${y}`;
+}
+function personLabel(p) {
+  const civ = p.civilite || 'Madame / Monsieur';
+  const full = [p.nom, p.prenom].filter(Boolean).join(' ') || null;
+  const date = fmtDate(p.naissance);
+  const lieu = p.lieuNaissance || null;
+  const naissStr = date && lieu ? `né(e) le ${date} à ${lieu}` : date ? `né(e) le ${date}` : lieu ? `né(e) à ${lieu}` : null;
+  return `${civ} ${full || '<span class="blank">[NOM Prénom]</span>'}${naissStr ? ' ' + naissStr : ''}`;
+}
+
+// ========== REFRESH ==========
+function refresh() {
+  const proprio = document.getElementById('proprio').value || null;
+  const lot = document.getElementById('lot').value || null;
+  const dateEffet = fmtDate(document.getElementById('date_effet').value) || null;
+  const dateExp = fmtDate(document.getElementById('date_expiration').value) || null;
+  const dateBail = fmtDate(document.getElementById('date_bail').value) || null;
+  const adresse = document.getElementById('adresse').value || null;
+  const { sortants, entrants, cautions } = state;
+
+  ['proprio','lot','date_effet','date_expiration','date_bail','adresse'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.toggle('filled', !!el.value.trim());
+  });
+
+  const sortantNames = sortants.map(p => [p.nom,p.prenom].filter(Boolean).join(' ')).filter(Boolean);
+  const refLocataire = sortantNames.length ? sortantNames.join(' / ') : '...';
+  const b = (v, label) => v ? v : `<span class="blank">[${label}]</span>`;
+  const S = (n, s, p) => n > 1 ? p : s;
+
+  const consentBlocks = entrants.map(p => {
+    const full = [p.civilite, p.nom, p.prenom].filter(Boolean).join(' ') || '...';
+    return `<div class="consent-line"><span class="checkbox-square"></span><span>J'autorise Foncia à transférer mes données à ses partenaires afin qu'ils me fassent parvenir des informations sur leurs produits et services.<br><strong>Consentement — ${full}</strong></span></div>`;
+  }).join('');
+
+  let cautionPara = '';
+  if (cautions.length === 1) cautionPara = `<p>${personLabel(cautions[0])} se porte caution solidaire du paiement des sommes dues par les nouveaux titulaires du bail. Cet acte de caution est annexé au présent avenant et indissociable de celui-ci.</p>`;
+  else if (cautions.length > 1) cautionPara = `<p>${cautions.map(c => personLabel(c)).join(', ')} se portent cautions solidaires du paiement des sommes dues par les nouveaux titulaires du bail. Ces actes de caution sont annexés au présent avenant et indissociables de celui-ci.</p>`;
+
+  const allSigs = [
+    ...sortants.map(p => ({ role: 'Titulaire sortant', name: `${p.civilite||'Madame / Monsieur'} ${[p.nom,p.prenom].filter(Boolean).join(' ')||'...'}` })),
+    ...entrants.map(p => ({ role: 'Nouveau titulaire', name: `${p.civilite||'Madame / Monsieur'} ${[p.nom,p.prenom].filter(Boolean).join(' ')||'...'}` })),
+    ...cautions.map(p => ({ role: 'Caution solidaire', name: `${p.civilite||'Madame / Monsieur'} ${[p.nom,p.prenom].filter(Boolean).join(' ')||'...'}` }))
+  ];
+  let sigRows = '';
+  for (let i = 0; i < allSigs.length; i += 2) {
+    const a = allSigs[i], bv = allSigs[i+1];
+    const cell = s => `<td class="sig-block" style="width:50%"><div class="sig-role">${s.role}</div><div class="sig-name">${s.name}</div><div class="sig-instruction">Signature précédée de « Lu et approuvé »</div><div class="sig-line"></div></td>`;
+    sigRows += `<tr>${cell(a)}${bv ? cell(bv) : '<td style="width:50%"></td>'}</tr>`;
+  }
+  const sigTable = `<table class="sig-table" style="width:100%;border-collapse:separate;border-spacing:6px 6px;">${sigRows}</table>`;
+  const mandataireSig = `<table class="sig-table" style="width:100%;margin-bottom:4px;border-collapse:separate;border-spacing:6px 6px;"><tr><td class="sig-block sig-mandataire" colspan="2"><div class="sig-role">Le mandataire</div><div class="sig-name">FONCIA CENTRE VAL-DE-LOIRE</div><div class="sig-instruction">M. GIROUD Michaël, représenté par M. BILLET Gatien</div><div class="sig-line"></div></td></tr></table>`;
+
+  const entrantsText = entrants.map(p => personLabel(p)).join(' et ') || '<span class="blank">[entrant(s)]</span>';
+  const sortantsText = sortants.map(p => personLabel(p)).join(' et ') || '<span class="blank">[sortant(s)]</span>';
+
+  document.getElementById('doc-content').innerHTML = `
+    <h1>Avenant à un bail à usage d'habitation</h1>
+    <p class="doc-ref">Vos réf. : ${b(proprio,'Propriétaire')} – LOT N°${b(lot,'N°')} – Locataire ${refLocataire}</p>
+    <p>Entre les soussignés :</p>
+    <p><strong>FONCIA CENTRE VAL-DE-LOIRE</strong> au capital de 2.200.000,00€ dont le siège social est à 5 Jardin d'Eblé, 49100, ANGERS, représentée par M. Michaël GIROUD représenté aux fins des présentes par Monsieur BILLET Gatien, et agissant en qualité de mandataire de ${proprio ? `Monsieur / Madame ${proprio}` : '<span class="blank">[Monsieur / Madame PROPRIÉTAIRE]</span>'}</p>
+    ${sortants.map(p => `<p>${personLabel(p)}</p>`).join('')}
+    <p>Titulaire${S(sortants.length,'','s')} – colocataire${S(sortants.length,'','s')} du bail signé en date du ${b(dateBail,'date du bail')} pour un appartement situé à ${b(adresse,'adresse du bien')} qui occupe${S(sortants.length,'','nt')} les lieux objet des présentes depuis l'origine du bail.</p>
+    <p>Il est expressément convenu ce qui suit.</p>
+    <p>${sortantsText}, titulaire${S(sortants.length,'','s')} colocataire${S(sortants.length,'','s')}, transfèr${S(sortants.length,'e','ent')} son droit au bail susvisé au profit de ${entrantsText} pour la durée contractuelle du bail en vigueur, ce que le mandataire accepte expressément.</p>
+    <p>En contrepartie de cette acceptation :</p>
+    <p>Le${S(entrants.length,'','s')} nouveau${S(entrants.length,'','x')} titulaire${S(entrants.length,'','s')} du bail accepte${S(entrants.length,'','nt')} toutes les charges et conditions du bail susvisé qui expire le ${b(dateExp,'date expiration')} et qu'il est inutile de rappeler ici, les parties déclarant bien les connaître.</p>
+    <p>Il${S(entrants.length,'','s')} reconnaisse${S(entrants.length,'','nt')} notamment l'état des lieux annexé au bail susvisé comme sincère et véritable et comme lui étant opposable.</p>
+    ${cautionPara}
+    <p>La présente succession prend effet à compter du ${b(dateEffet,"date d'effet")}.</p>
+    <p class="section-title">Mise à disposition du « dossier amiante – parties privatives » et du « dossier technique amiante »</p>
+    <p>Conformément aux dispositions du décret n°2011-629 du 3 juin 2011, le « dossier amiante – parties privatives » et le « dossier technique amiante » du bien objet du présent bail sont tenus à la disposition du preneur. Celui-ci pourra venir les consulter sur simple demande de rendez-vous fixé à la convenance des deux parties dans les bureaux du mandataire du bailleur. Le preneur pourra obtenir s'il le désire, à sa demande et à ses frais, copie de ces documents.</p>
+    <div class="signatures-section">
+      <p class="sig-intro">Fait à Angers, le ${b(dateEffet,"date d'effet")}</p>
+      ${mandataireSig}${sigTable}
+    </div>
+    <div class="rgpd">
+      <p class="section-title" style="font-size:9pt;">Protection des données personnelles</p>
+      <p>Les données personnelles recueillies par Foncia font notamment l'objet de traitements, sur la base de l'exécution de votre contrat ou de mesures précontractuelles prises à votre demande, afin de conclure le contrat et vous fournir les services y étant décrits, y compris la création de votre compte MyFoncia, et traiter vos réclamations relatives à celui-ci. Vos données peuvent également faire l'objet de traitements visant à mettre en œuvre des opérations de prospection lorsque vous y consentez. Enfin, elles peuvent également faire l'objet de traitements sur la base de nos obligations légales ou à des fins de preuves en cas de contentieux.</p>
+      <p>Vos données personnelles sont accessibles par notre personnel ayant besoin d'en avoir connaissance dans le cadre de l'exercice de leurs fonctions. Elles peuvent également être accessibles par ou transférées à certains tiers, notamment nos sous-traitants intervenant pour notre compte dans le cadre de l'exécution de votre contrat, toute société tierce dans le cadre d'une restructuration de notre société, et toute autorité, juridiction ou autre tiers lorsqu'une telle communication est requise par une loi ou est nécessaire pour assurer la protection ou la défense de nos droits.</p>
+      <p>Vos données peuvent aussi être partagées au Groupe EMERIA ou ses filiales dans des situations spécifiques. Enfin, sous réserve de votre consentement, elles peuvent être partagées aux filiales du Groupe ou à nos partenaires à des fins de prospection. Dans tous les cas, seules les données strictement nécessaires aux traitements effectués par ces tiers seront partagées. En dehors de ces cas, vos données ne seront pas transférées ou rendues accessibles sans votre consentement préalable.</p>
+      <p>Vos données personnelles sont conservées pendant la durée nécessaire afin d'atteindre les finalités pour lesquelles elles ont été collectées. D'une manière générale, sauf cas particuliers, vos données seront conservées et traitées pendant toute la durée de la relation commerciale puis pendant cinq (5) ans à compter de son terme afin de respecter, le cas échéant, les délais de prescriptions légaux ainsi que nos obligations légales, notamment celles relatives à la lutte contre le blanchiment de capitaux et le financement du terrorisme (LBC-FT) - conformément à l'article 2224 du code civil et à l'article L561-12 du code monétaire et financier. Durant ce délai de 5 ans, vos données ne seront pas utilisées sauf pour répondre à une obligation légale, notamment comptable, fiscale ou LBC-FT, ou en cas de contentieux. Vos données seront ensuite supprimées de l'ensemble de nos dossiers et systèmes d'information. Sachez que certaines de vos données, présentes au sein de nos registres légaux, seront également conservées pendant dix (10) ans suivant les articles 53, 65 et 72 du décret du 20 juillet 1972.</p>
+      <p>Conformément à la réglementation applicable, vous disposez des droits suivants : d'un droit d'accès à vos données, d'un droit de rectification, d'un droit d'effacement, de limitation et de portabilité dans certains cas particuliers, ainsi que d'un droit de legs numériques, c'est-à-dire de d'établir des directives, générales ou particulières, quant à la manière dont vous souhaitez que nous conservions, supprimions et/ou communiquions vos données personnelles après votre décès. Vous disposez également d'un droit d'opposition lorsque les traitements effectués ont une finalité de prospection commerciale ou sont fondés sur notre intérêt légitime. Enfin, vous disposez du droit de retirer votre consentement à tout moment lorsque le traitement de vos données est fondé sur cette base légale.</p>
+      <p>Vos droits sont exerçables auprès de notre Délégué à la protection des données (DPO) : dpo@foncia.com. Pour vous opposer à la prospection, vous pouvez également utiliser le lien de désinscription prévu à cet effet dans chaque courriel.</p>
+      <p>Vous disposez en outre du droit d'introduire une réclamation auprès d'une autorité de contrôle. L'autorité de contrôle française est la Commission Nationale de l'Informatique et des Libertés (CNIL). Vous pouvez la contacter par courrier au 3 Place de Fontenoy - TSA 80715 - 75334 PARIS CEDEX 07, ou directement sur son site Internet : https://www.cnil.fr/fr/plaintes</p>
+      <p>Conformément à l'Article L.561-45 du Code monétaire et financier, si votre droit d'accès porte sur les traitements relatifs à la lutte contre le blanchiment de capitaux et le financement du terrorisme, vous devez l'exercer directement auprès de la CNIL.</p>
+      <div class="consent-block">${consentBlocks}</div>
+      <p style="margin-top:10px;">Pour plus d'information sur la gestion de vos données personnelles et sur vos droits, consultez notre Charte de protection des données.</p>
+    </div>`;
+
+  updateCompletude();
+}
+
+// ========== PRINT ==========
+function printDoc() { window.print(); }
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); printDoc(); }
+  if (e.key === 'Escape') closeModal();
+});
+
+// ========== INIT ==========
+function init() {
+  const loaded = loadFromLS();
+  if (!loaded || state.sortants.length === 0) {
+    addPerson('sortant');
+    if (state.entrants.length === 0) addPerson('entrant');
+  } else {
+    renderPersons('sortant'); renderPersons('entrant'); renderPersons('caution');
+    if (state.sortants.length >= 4) document.getElementById('btn-add-sortant').style.display = 'none';
+    if (state.entrants.length >= 4) document.getElementById('btn-add-entrant').style.display = 'none';
+  }
+  renderProprios();
+  refresh();
+  updateTitle();
+  showSaved();
+  ['proprio','lot','date_effet','date_expiration','date_bail','adresse'].forEach(id => {
+    document.getElementById(id).addEventListener('input', () => debounceSave());
+  });
+}
+
+init();
+</script>
+</body>
+</html>
