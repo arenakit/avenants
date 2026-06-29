@@ -178,6 +178,8 @@ body {
 .btn-ghost:hover { background: var(--panel-2); color: var(--text); border-color: #484f58; }
 .btn-facture { border-color: rgba(63,185,80,0.3); color: #3fb950; }
 .btn-facture:hover { background: rgba(63,185,80,0.08); border-color: var(--green); color: var(--green); }
+.btn-caution { border-color: rgba(240,180,41,0.3); color: var(--gold); }
+.btn-caution:hover { background: var(--gold-glow); border-color: var(--gold); color: var(--gold); }
 
 .btn-primary {
   padding: 8px 18px;
@@ -924,6 +926,55 @@ input.filled:focus {
   </div>
 </div>
 
+<!-- MODALE ACTE DE CAUTION -->
+<div class="modal-facture" id="modal-caution">
+  <div class="facture-preview-wrap" style="max-width:780px;">
+    <div class="facture-modal-header">
+      <div>
+        <div class="facture-modal-title">Acte de cautionnement</div>
+        <div class="facture-modal-sub" id="caution-modal-sub">Engagement de cautionnement solidaire</div>
+      </div>
+      <div class="facture-modal-actions">
+        <div id="caution-nav" style="display:flex;align-items:center;gap:8px;"></div>
+        <button class="btn-primary" onclick="printCaution()"><span>🖨</span> Imprimer</button>
+        <button class="btn-close-facture" onclick="closeCaution()">✕</button>
+      </div>
+    </div>
+    <div class="facture-scroll">
+      <div class="facture-doc-wrapper" style="max-width:680px;">
+        <div id="caution-content" style="font-family:Georgia,serif;font-size:10pt;line-height:1.65;color:#111;padding:44px 52px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE AVERTISSEMENT IMPRESSION -->
+<div class="modal-overlay" id="modal-print-warn">
+  <div class="modal">
+    <h2 style="color:var(--gold);">⚠ Champs manquants</h2>
+    <p>Les champs suivants ne sont pas renseignés. Le document sera incomplet.</p>
+    <ul id="print-warn-list" style="margin:0 0 18px 16px;font-size:13px;color:var(--text-muted);line-height:1.8;"></ul>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btn-print-cancel">Compléter d'abord</button>
+      <button class="btn-confirm-reset" id="btn-print-anyway" style="background:var(--gold);color:#0d0a00;">Imprimer quand même</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODALE HISTORIQUE -->
+<div class="modal-overlay" id="modal-history">
+  <div class="modal" style="max-width:520px;width:95%;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h2>Dossiers récents</h2>
+      <button class="btn-cancel" onclick="closeHistoryModal()" style="padding:4px 10px;">✕</button>
+    </div>
+    <div id="history-list"></div>
+    <div style="margin-top:16px;display:flex;gap:8px;justify-content:flex-end;">
+      <button class="btn-cancel" onclick="closeHistoryModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 <!-- HEADER -->
 <header class="app-header">
   <div class="header-brand">
@@ -946,9 +997,16 @@ input.filled:focus {
     </div>
     <div class="header-divider"></div>
     <div class="header-actions">
+      <button class="btn-ghost" onclick="openHistoryModal()" title="Dossiers récents">🕐 Historique</button>
+      <button class="btn-ghost" onclick="exportDossier()" title="Exporter le dossier en JSON">⬇ Export</button>
+      <button class="btn-ghost" onclick="importDossier()" title="Importer un dossier JSON">⬆ Import</button>
+      <div class="header-divider"></div>
       <button class="btn-ghost" onclick="openModal()">＋ Nouveau dossier</button>
       <button class="btn-ghost btn-facture" onclick="openFacture()" title="Facture d'honoraires">
-        <span>🧾</span> Facture honoraires
+        <span>🧾</span> Facture
+      </button>
+      <button class="btn-ghost btn-caution" id="btn-acte-caution" onclick="openCaution()" title="Acte(s) de cautionnement" style="display:none">
+        <span>🔏</span> Caution
       </button>
       <button class="btn-primary" onclick="printDoc()" title="Ctrl+P">
         <span>🖨</span> Imprimer
@@ -982,11 +1040,13 @@ input.filled:focus {
         <div class="field-group">
           <label>Date de prise d'effet</label>
           <input type="date" id="date_effet" oninput="refresh()">
+          <div id="warn-date-effet" style="display:none;align-items:center;gap:5px;font-size:11px;color:#facc15;margin-top:4px;"><span>⚠</span><span>Date incohérente</span></div>
         </div>
       </div>
       <div class="field-group">
         <label>Date d'expiration du bail</label>
         <input type="date" id="date_expiration" oninput="refresh()">
+        <div id="warn-date-exp" style="display:none;align-items:center;gap:5px;font-size:11px;color:#facc15;margin-top:4px;"><span>⚠</span><span>L'expiration est antérieure à la prise d'effet</span></div>
       </div>
       <div class="field-group">
         <label>Date de signature du bail initial</label>
@@ -1022,9 +1082,42 @@ input.filled:focus {
       <div id="entrants-list"></div>
       <button class="btn-add add-entrant" id="btn-add-entrant" onclick="addPerson('entrant')">+ Ajouter un entrant</button>
 
+      <div class="section-label">Bail &amp; loyer <span style="color:var(--text-dim);font-weight:400;font-family:var(--font-ui);text-transform:none;letter-spacing:0;font-size:10px;">(pour acte de caution)</span></div>
+
+      <div class="field-group">
+        <label>Type de bail</label>
+        <select class="civilite-select" id="type_bail" onchange="refresh(); debounceSave()">
+          <option value="nu">Logement nu — 3 ans</option>
+          <option value="meuble">Logement meublé — 1 an</option>
+        </select>
+      </div>
+      <div class="inline-grid">
+        <div class="field-group">
+          <label>Loyer mensuel (€)</label>
+          <input type="text" id="loyer" placeholder="ex. 910.48" oninput="refresh(); debounceSave()">
+        </div>
+        <div class="field-group">
+          <label>Charges mensuelles (€)</label>
+          <input type="text" id="charges" placeholder="ex. 260.00" oninput="refresh(); debounceSave()">
+        </div>
+      </div>
+      <div class="inline-grid">
+        <div class="field-group">
+          <label>Trimestre IRL de référence</label>
+          <input type="text" id="irl_trimestre" placeholder="ex. 4ème trimestre 2024" oninput="refresh(); debounceSave()">
+        </div>
+        <div class="field-group">
+          <label>Valeur IRL</label>
+          <input type="text" id="irl_valeur" placeholder="ex. 143.46" oninput="refresh(); debounceSave()">
+        </div>
+      </div>
+
       <div class="section-label">Caution(s) solidaire(s) <span style="color:var(--text-dim);font-weight:400;font-family:var(--font-ui);text-transform:none;letter-spacing:0;font-size:10px;">(optionnel)</span></div>
       <div id="cautions-list"></div>
       <button class="btn-add add-caution" onclick="addPerson('caution')">+ Ajouter une caution</button>
+
+      <div class="section-label" style="margin-top:28px;">Notes internes <span style="color:var(--text-dim);font-weight:400;font-family:var(--font-ui);text-transform:none;letter-spacing:0;font-size:10px;">(non imprimé)</span></div>
+      <textarea id="notes-field" placeholder="Remarques, N° ICS, commentaires…" rows="3" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:12.5px;font-family:var(--font-ui);color:var(--text);background:var(--bg);resize:vertical;outline:none;transition:border-color 0.15s;color-scheme:dark;line-height:1.5;" onfocus="this.style.borderColor='var(--gold-dim)'" onblur="this.style.borderColor='var(--border)'"></textarea>
 
     </div>
   </div>
@@ -1049,24 +1142,53 @@ let sortantCounter = 0, entrantCounter = 0, cautionCounter = 0;
 let saveTimeout = null;
 
 // ========== LOCALSTORAGE ==========
-const LS_KEY = 'avenant_state_v2';
+const LS_KEY = 'avenant_state_v3';
 const LS_PROPRIOS = 'avenant_proprios_v1';
+const LS_HISTORY = 'avenant_history_v1';
+const LS_FACTURE_NUM = 'avenant_facture_num_v1';
 
-function saveToLS() {
-  const data = {
+function getFormData() {
+  return {
     proprio: document.getElementById('proprio').value,
     lot: document.getElementById('lot').value,
     date_effet: document.getElementById('date_effet').value,
     date_expiration: document.getElementById('date_expiration').value,
     date_bail: document.getElementById('date_bail').value,
     adresse: document.getElementById('adresse').value,
+    type_bail: document.getElementById('type_bail').value,
+    loyer: document.getElementById('loyer').value,
+    charges: document.getElementById('charges').value,
+    irl_trimestre: document.getElementById('irl_trimestre').value,
+    irl_valeur: document.getElementById('irl_valeur').value,
+    notes: document.getElementById('notes-field') ? document.getElementById('notes-field').value : '',
     sortants: state.sortants,
     entrants: state.entrants,
     cautions: state.cautions,
-    sortantCounter, entrantCounter, cautionCounter
+    sortantCounter, entrantCounter, cautionCounter,
+    savedAt: new Date().toISOString()
   };
+}
+
+function saveToLS() {
+  const data = getFormData();
   localStorage.setItem(LS_KEY, JSON.stringify(data));
   showSaved();
+  saveToHistory(data);
+}
+
+function saveToHistory(data) {
+  if (!data.proprio && !data.lot) return; // Dossier vide, pas d'historique
+  try {
+    let history = JSON.parse(localStorage.getItem(LS_HISTORY) || '[]');
+    // Remplacer si même lot+proprio, sinon ajouter
+    const idx = history.findIndex(h => h.lot === data.lot && h.proprio === data.proprio);
+    const entry = { ...data, savedAt: new Date().toISOString() };
+    if (idx >= 0) history[idx] = entry;
+    else history.unshift(entry);
+    history = history.slice(0, 5); // Garder les 5 derniers
+    localStorage.setItem(LS_HISTORY, JSON.stringify(history));
+    renderHistory();
+  } catch(e) {}
 }
 
 function showSaved() {
@@ -1076,25 +1198,109 @@ function showSaved() {
   el.classList.add('saved');
 }
 
+function todayStr() {
+  const t = new Date();
+  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+}
+
+function applyData(data) {
+  document.getElementById('proprio').value = data.proprio || '';
+  document.getElementById('lot').value = data.lot || '';
+  document.getElementById('date_effet').value = data.date_effet || '';
+  document.getElementById('date_expiration').value = data.date_expiration || '';
+  document.getElementById('date_bail').value = data.date_bail || '';
+  document.getElementById('adresse').value = data.adresse || '';
+  document.getElementById('type_bail').value = data.type_bail || 'nu';
+  document.getElementById('loyer').value = data.loyer || '';
+  document.getElementById('charges').value = data.charges || '';
+  document.getElementById('irl_trimestre').value = data.irl_trimestre || '';
+  document.getElementById('irl_valeur').value = data.irl_valeur || '';
+  if (document.getElementById('notes-field')) document.getElementById('notes-field').value = data.notes || '';
+  state.sortants = data.sortants || [];
+  state.entrants = data.entrants || [];
+  state.cautions = data.cautions || [];
+  sortantCounter = data.sortantCounter || 0;
+  entrantCounter = data.entrantCounter || 0;
+  cautionCounter = data.cautionCounter || 0;
+}
+
 function loadFromLS() {
   const raw = localStorage.getItem(LS_KEY);
   if (!raw) return false;
   try {
     const data = JSON.parse(raw);
-    document.getElementById('proprio').value = data.proprio || '';
-    document.getElementById('lot').value = data.lot || '';
-    document.getElementById('date_effet').value = data.date_effet || '';
-    document.getElementById('date_expiration').value = data.date_expiration || '';
-    document.getElementById('date_bail').value = data.date_bail || '';
-    document.getElementById('adresse').value = data.adresse || '';
-    state.sortants = data.sortants || [];
-    state.entrants = data.entrants || [];
-    state.cautions = data.cautions || [];
-    sortantCounter = data.sortantCounter || 0;
-    entrantCounter = data.entrantCounter || 0;
-    cautionCounter = data.cautionCounter || 0;
+    applyData(data);
     return true;
   } catch(e) { return false; }
+}
+
+// ========== HISTORIQUE ==========
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(LS_HISTORY) || '[]'); }
+  catch(e) { return []; }
+}
+
+function restoreFromHistory(idx) {
+  const h = getHistory()[idx];
+  if (!h) return;
+  applyData(h);
+  renderPersons('sortant'); renderPersons('entrant'); renderPersons('caution');
+  if (state.sortants.length >= 4) document.getElementById('btn-add-sortant').style.display = 'none';
+  if (state.entrants.length >= 4) document.getElementById('btn-add-entrant').style.display = 'none';
+  refresh(); updateTitle();
+  closeHistoryModal();
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (!list) return;
+  const history = getHistory();
+  if (!history.length) {
+    list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 0;">Aucun dossier enregistré</p>';
+    return;
+  }
+  list.innerHTML = history.map((h, i) => {
+    const d = new Date(h.savedAt);
+    const dateStr = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    return `<div class="history-item" onclick="restoreFromHistory(${i})">
+      <div class="history-item-main">
+        <span class="history-lot">${h.lot ? 'LOT ' + h.lot : '—'}</span>
+        <span class="history-proprio">${h.proprio || 'Sans propriétaire'}</span>
+      </div>
+      <div class="history-item-sub">
+        <span>${h.adresse || 'Adresse non renseignée'}</span>
+        <span class="history-date">${dateStr}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openHistoryModal() {
+  renderHistory();
+  document.getElementById('modal-history').classList.add('open');
+}
+function closeHistoryModal() {
+  document.getElementById('modal-history').classList.remove('open');
+}
+
+// ========== N° FACTURE ==========
+function getFactureNum() {
+  const stored = localStorage.getItem(LS_FACTURE_NUM);
+  if (stored) return JSON.parse(stored);
+  const year = new Date().getFullYear();
+  return { year, seq: 0 };
+}
+function nextFactureNum() {
+  let num = getFactureNum();
+  const year = new Date().getFullYear();
+  if (num.year !== year) { num = { year, seq: 0 }; }
+  num.seq++;
+  localStorage.setItem(LS_FACTURE_NUM, JSON.stringify(num));
+  return `FA-${num.year}-${String(num.seq).padStart(3,'0')}`;
+}
+function currentFactureNum() {
+  const num = getFactureNum();
+  return `FA-${num.year}-${String(num.seq).padStart(3,'0')}`;
 }
 
 // ========== PROPRIOS ==========
@@ -1169,9 +1375,17 @@ function confirmReset() { closeModal(); resetAll(); }
 function resetAll() {
   state.sortants = []; state.entrants = []; state.cautions = [];
   sortantCounter = 0; entrantCounter = 0; cautionCounter = 0;
-  ['proprio','lot','date_effet','date_expiration','date_bail','adresse'].forEach(id => document.getElementById(id).value = '');
+  ['proprio','lot','adresse','loyer','charges','irl_trimestre','irl_valeur'].forEach(id => document.getElementById(id).value = '');
+  // Pré-remplir les dates avec aujourd'hui
+  const today = todayStr();
+  document.getElementById('date_effet').value = today;
+  document.getElementById('date_bail').value = today;
+  document.getElementById('date_expiration').value = '';
+  document.getElementById('type_bail').value = 'nu';
+  if (document.getElementById('notes-field')) document.getElementById('notes-field').value = '';
   document.getElementById('btn-add-sortant').style.display = '';
   document.getElementById('btn-add-entrant').style.display = '';
+  renderPersons('sortant'); renderPersons('entrant'); renderPersons('caution');
   addPerson('sortant'); addPerson('entrant');
   saveToLS(); updateTitle();
 }
@@ -1209,6 +1423,10 @@ function updateCompletude() {
   document.getElementById('progress-bar').style.width = pct + '%';
   document.getElementById('completude-dots').innerHTML = results.map(r =>
     `<span class="cdot ${r.ok ? 'ok' : ''}" title="${r.label}"></span>`).join('');
+
+  // Bouton acte de caution : visible si au moins une caution
+  const btnCaution = document.getElementById('btn-acte-caution');
+  if (btnCaution) btnCaution.style.display = state.cautions.length > 0 ? '' : 'none';
 }
 
 // ========== PERSONS ==========
@@ -1219,7 +1437,7 @@ function addPerson(type, prefill = {}) {
   if (type === 'sortant') id = ++sortantCounter;
   else if (type === 'entrant') id = ++entrantCounter;
   else id = ++cautionCounter;
-  state[type + 's'].push({ id, civilite: prefill.civilite || 'Madame', nom: prefill.nom || '', prenom: prefill.prenom || '', naissance: prefill.naissance || '', lieuNaissance: prefill.lieuNaissance || '' });
+  state[type + 's'].push({ id, civilite: prefill.civilite || 'Madame', nom: prefill.nom || '', prenom: prefill.prenom || '', naissance: prefill.naissance || '', lieuNaissance: prefill.lieuNaissance || '', adresseCaution: prefill.adresseCaution || '' });
   renderPersons(type); refresh(); debounceSave();
   if (type === 'sortant' && state.sortants.length >= 4) document.getElementById('btn-add-sortant').style.display = 'none';
   if (type === 'entrant' && state.entrants.length >= 4) document.getElementById('btn-add-entrant').style.display = 'none';
@@ -1270,6 +1488,11 @@ function renderPersons(type) {
           <input type="text" value="${escHtml(p.lieuNaissance)}" placeholder="Ville" oninput="updatePerson('${type}',${p.id},'lieuNaissance',this.value)" class="${p.lieuNaissance?'filled':''}">
         </div>
       </div>
+      ${type === 'caution' ? `
+      <div class="field-group" style="margin-top:4px;">
+        <label>Adresse complète de la caution</label>
+        <input type="text" value="${escHtml(p.adresseCaution||'')}" placeholder="ex. 23 rue de la Paix 75001 Paris" oninput="updatePerson('${type}',${p.id},'adresseCaution',this.value)" class="${p.adresseCaution?'filled':''}">
+      </div>` : ''}
     </div>`).join('');
 }
 
@@ -1308,9 +1531,12 @@ function personLabel(p) {
 function refresh() {
   const proprio = document.getElementById('proprio').value || null;
   const lot = document.getElementById('lot').value || null;
-  const dateEffet = fmtDate(document.getElementById('date_effet').value) || null;
-  const dateExp = fmtDate(document.getElementById('date_expiration').value) || null;
-  const dateBail = fmtDate(document.getElementById('date_bail').value) || null;
+  const dateEffetRaw = document.getElementById('date_effet').value;
+  const dateExpRaw = document.getElementById('date_expiration').value;
+  const dateBailRaw = document.getElementById('date_bail').value;
+  const dateEffet = fmtDate(dateEffetRaw) || null;
+  const dateExp = fmtDate(dateExpRaw) || null;
+  const dateBail = fmtDate(dateBailRaw) || null;
   const adresse = document.getElementById('adresse').value || null;
   const { sortants, entrants, cautions } = state;
 
@@ -1318,6 +1544,16 @@ function refresh() {
     const el = document.getElementById(id);
     el.classList.toggle('filled', !!el.value.trim());
   });
+
+  // Validation cohérence des dates
+  const warnEffet = document.getElementById('warn-date-effet');
+  const warnExp = document.getElementById('warn-date-exp');
+  if (warnEffet && warnExp) {
+    const hasEffet = !!dateEffetRaw, hasExp = !!dateExpRaw;
+    const expBeforeEffet = hasEffet && hasExp && dateExpRaw < dateEffetRaw;
+    warnEffet.style.display = 'none';
+    warnExp.style.display = expBeforeEffet ? 'flex' : 'none';
+  }
 
   const sortantNames = sortants.map(p => [p.nom,p.prenom].filter(Boolean).join(' ')).filter(Boolean);
   const refLocataire = sortantNames.length ? sortantNames.join(' / ') : '...';
@@ -1387,8 +1623,258 @@ function refresh() {
   updateCompletude();
 }
 
+// ========== CONVERSION NOMBRE EN LETTRES ==========
+function nombreEnLettres(n) {
+  const u = ['','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix',
+    'onze','douze','treize','quatorze','quinze','seize','dix-sept','dix-huit','dix-neuf'];
+  const d = ['','','vingt','trente','quarante','cinquante','soixante','soixante','quatre-vingt','quatre-vingt'];
+
+  if (n === 0) return 'zéro';
+  if (n < 0) return 'moins ' + nombreEnLettres(-n);
+
+  function centaines(n) {
+    if (n === 0) return '';
+    if (n < 20) return u[n];
+    const di = Math.floor(n / 10), un = n % 10;
+    if (di === 7) {
+      return un === 1 ? 'soixante et onze' : un === 0 ? 'soixante-dix' : 'soixante-' + u[10 + un];
+    }
+    if (di === 9) {
+      return un === 0 ? 'quatre-vingt-dix' : 'quatre-vingt-' + u[10 + un];
+    }
+    if (di === 8) return un === 0 ? 'quatre-vingts' : 'quatre-vingt-' + u[un];
+    return d[di] + (un === 1 && di !== 8 ? ' et ' : un > 0 ? '-' : '') + u[un];
+  }
+
+  function groupe(n) {
+    if (n === 0) return '';
+    const c = Math.floor(n / 100), r = n % 100;
+    let res = '';
+    if (c === 1) res = 'cent ';
+    else if (c > 1) res = u[c] + (r === 0 ? ' cents' : ' cent ');
+    return res + centaines(r);
+  }
+
+  const mil = Math.floor(n / 1000), reste = n % 1000;
+  let res = '';
+  if (mil === 1) res = 'mille ';
+  else if (mil > 1) res = groupe(mil) + ' mille ';
+  return (res + groupe(reste)).trim().replace(/\s+/g, ' ');
+}
+
+function montantEnLettres(euros, centimes) {
+  let txt = nombreEnLettres(euros) + ' euro' + (euros > 1 ? 's' : '');
+  if (centimes > 0) txt += ' et ' + nombreEnLettres(centimes) + ' centime' + (centimes > 1 ? 's' : '');
+  return txt.charAt(0).toUpperCase() + txt.slice(1);
+}
+
+// ========== ACTE DE CAUTION ==========
+let cautionIdx = 0;
+
+function openCaution() {
+  const loyer = parseFloat(document.getElementById('loyer').value.replace(',','.'));
+  if (!loyer || loyer === 0) {
+    alert("Veuillez renseigner le montant du loyer avant de générer l'acte de cautionnement.");
+    return;
+  }
+  cautionIdx = 0;
+  renderCaution(cautionIdx);
+  document.getElementById('modal-caution').classList.add('open');
+}
+function closeCaution() {
+  document.getElementById('modal-caution').classList.remove('open');
+}
+
+function renderCaution(idx) {
+  const cautions = state.cautions;
+  if (!cautions.length) return;
+  cautionIdx = idx;
+
+  // Navigation si plusieurs cautions
+  const nav = document.getElementById('caution-nav');
+  if (cautions.length > 1) {
+    nav.innerHTML = `
+      <button onclick="renderCaution(${idx-1})" ${idx===0?'disabled':''} style="padding:5px 10px;border:1px solid #30363d;border-radius:6px;background:#161b22;color:#e6edf3;cursor:pointer;font-size:12px;">&larr;</button>
+      <span style="font-size:12px;color:#8b949e;">Caution ${idx+1}/${cautions.length}</span>
+      <button onclick="renderCaution(${idx+1})" ${idx===cautions.length-1?'disabled':''} style="padding:5px 10px;border:1px solid #30363d;border-radius:6px;background:#161b22;color:#e6edf3;cursor:pointer;font-size:12px;">&rarr;</button>`;
+  } else {
+    nav.innerHTML = '';
+  }
+
+  const c = cautions[idx];
+  const proprio = document.getElementById('proprio').value || null;
+  const adresse = document.getElementById('adresse').value || null;
+  const dateEffet = fmtDate(document.getElementById('date_effet').value) || null;
+  const typeBail = document.getElementById('type_bail').value;
+  const dureeAns = typeBail === 'meuble' ? 1 : 3;
+  const loyerVal = parseFloat(document.getElementById('loyer').value.replace(',','.')) || 0;
+  const chargesVal = parseFloat(document.getElementById('charges').value.replace(',','.')) || 0;
+  const irlTrim = document.getElementById('irl_trimestre').value || null;
+  const irlVal = document.getElementById('irl_valeur').value || null;
+  const entrants = state.entrants;
+
+  const b = (v, label) => v ? v : `<span style="color:#c00;font-style:italic;">[${label}]</span>`;
+
+  // Noms des locataires cautionnés (entrants)
+  const locNoms = entrants.map(p => [p.civilite, p.nom, p.prenom].filter(Boolean).join(' ')).filter(Boolean);
+  const locNomsTxt = locNoms.length ? locNoms.join(', ') : b(null, 'locataires');
+  const locNomsCourt = entrants.map(p => [p.nom, p.prenom].filter(Boolean).join(' ')).filter(Boolean).join(', ') || b(null, 'locataires');
+
+  // Caution courante
+  const cautionCiv = c.civilite || 'Madame / Monsieur';
+  const cautionNom = [c.nom, c.prenom].filter(Boolean).join(' ') || null;
+  const cautionNomInv = [c.nom ? c.nom.toUpperCase() : '', c.prenom].filter(Boolean).join(' ') || null;
+  const cautionAdresse = c.adresseCaution || null;
+  const cautionLabel = [cautionCiv, cautionNom].filter(Boolean).join(' ');
+
+  // Montant max = (loyer + charges) x 36 mois
+  const totalMensuel = loyerVal + chargesVal;
+  const montantMax = totalMensuel * 36;
+  const montantMaxStr = montantMax.toFixed(2).replace('.', ',');
+  const eurosMax = Math.floor(montantMax);
+  const centimesMax = Math.round((montantMax - eurosMax) * 100);
+  const montantLettres = montantMax > 0 ? montantEnLettres(eurosMax, centimesMax) : b(null, 'montant en lettres');
+
+  // Loyer en lettres
+  const loyerEuros = Math.floor(loyerVal);
+  const loyerCentimes = Math.round((loyerVal - loyerEuros) * 100);
+  const loyerLettres = loyerVal > 0 ? montantEnLettres(loyerEuros, loyerCentimes) : b(null, 'loyer en lettres');
+  const chargesEuros = Math.floor(chargesVal);
+  const chargesCentimes = Math.round((chargesVal - chargesEuros) * 100);
+  const chargesLettres = chargesVal > 0 ? montantEnLettres(chargesEuros, chargesCentimes) : b(null, 'charges en lettres');
+
+  // Date anniversaire (jour + mois de la date d'effet)
+  let dateAnniv = b(null, 'date anniversaire');
+  if (dateEffet) {
+    const [d2, m2] = dateEffet.split('/');
+    const moisNoms = ['','janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+    dateAnniv = `${parseInt(d2)} ${moisNoms[parseInt(m2)]}`;
+  }
+
+  // Durée max engagement
+  const dureeMax = dureeAns * 3; // 3 ans → 9 ans, 1 an → 3 ans
+  const nbReconductions = 2;
+
+  document.getElementById('caution-modal-sub').textContent =
+    cautionNom ? `${cautionLabel} — Caution ${idx+1}/${cautions.length}` : `Caution ${idx+1}/${cautions.length}`;
+
+  document.getElementById('caution-content').innerHTML = `
+<p style="text-align:center;font-size:9pt;margin-bottom:6px;">Page 1 sur 2</p>
+<h2 style="text-align:center;font-size:13pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:4px;">Engagement de cautionnement</h2>
+<p style="text-align:center;font-size:9pt;font-style:italic;margin-bottom:20px;">(y compris en cas de colocation)</p>
+
+<p>Après avoir reçu toute information de façon explicite et non équivoque sur la nature et l'étendue des obligations que je contracte, je soussigné ${b(cautionLabel,'Civilité NOM Prénom')} demeurant : ${b(cautionAdresse,'adresse complète de la caution')} déclare me porter caution solidaire, avec renonciation aux bénéfices de division et de discussion, du règlement de toutes sommes pouvant être dues par ${locNomsTxt} en vertu du bail (susceptible de faire l'objet de reconductions tacites ou de renouvellements) qui leur a été consenti pour une durée initiale de ${dureeAns} an${dureeAns > 1 ? 's' : ''}, à compter du ${b(dateEffet,"date d'effet")} pour les locaux situés dans l'immeuble sis à ${b(adresse,'adresse du bien')}, bail dont j'ai pris connaissance, un exemplaire m'ayant été remis.</p>
+
+<p>J'ai noté que le montant initial du loyer s'élève à ${loyerVal > 0 ? loyerVal.toFixed(2).replace('.',',') + ' €uros (' + loyerLettres + ')' : b(null,'montant du loyer')}, les provisions sur charges s'élèvent à ${chargesVal > 0 ? chargesVal.toFixed(2).replace('.',',') + ' €uros (' + chargesLettres + ')' : b(null,'montant des charges')} par mois. Le loyer et les charges sont payables d'avance. Le loyer sera révisé tous les ans à la date anniversaire du bail le ${dateAnniv} suivant la variation de l'indice de référence des loyers publié par l'INSEE. L'indice de base retenu est celui du ${b(irlTrim,'trimestre IRL')} valeur ${b(irlVal,'valeur IRL')}. Il est à comparer avec l'indice du même trimestre connu à la date de révision.</p>
+
+<p>Le présent engagement de caution porte non seulement sur les sommes étant la conséquence directe du bail sus relaté, mais aussi sur toutes celles en étant la suite ou la conséquence, à savoir :</p>
+
+<p>les loyers (actuels et révisés), les charges locatives, taxes, impôts, réparations locatives, frais et dépens de procédure et coût des actes, indemnités de toutes sortes et notamment indemnités d'occupation et/ou dommages et intérêts pouvant résulter d'une poursuite de l'occupation du logement entre la date d'expiration ou de résiliation du bail et la restitution effective de l'appartement et de la remise à disposition des clefs, observation faite que la présente énumération est purement indicative et non limitative.</p>
+
+<p>Je soussigné ${b(cautionNomInv ? cautionCiv + ' ' + cautionNomInv : null, 'Civilité NOM Prénom')}, en ma qualité de caution, m'engage à payer ${proprio ? 'Monsieur / Madame ' + proprio : b(null,'le propriétaire')}, le créancier, en cas de défaillance de paiement de ${locNomsCourt}, les débiteurs, dans la limite d'un montant maximum de ${montantLettres} (${montantMaxStr} €uros) en principal et accessoires. Je renonce aux bénéfices de division et de discussion, ainsi je ne pourrai pas exiger du créancier qu'il poursuive d'abord le débiteur et qu'il divise ses poursuites entre les cautions.</p>
+
+<div style="border:2px solid #333;border-radius:4px;padding:14px 16px;margin:16px 0;background:#fafafa;">
+  <p style="font-size:9pt;font-weight:bold;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;color:#333;">⚠ Mention à reproduire en manuscrit par la caution ci-après&nbsp;:</p>
+  <p style="font-size:9pt;color:#555;font-style:italic;margin-bottom:14px;line-height:1.6;">« Je soussigné ${b(cautionNomInv ? cautionCiv + ' ' + cautionNomInv : null,'Civilité NOM Prénom')}, en ma qualité de caution, m'engage à payer ${proprio ? 'Monsieur / Madame ' + proprio : b(null,'le propriétaire')}, le créancier, en cas de défaillance de paiement de ${locNomsCourt}, les débiteurs, dans la limite d'un montant maximum de ${montantLettres} (${montantMaxStr} €uros) en principal et accessoires. Je renonce aux bénéfices de division et de discussion, ainsi je ne pourrai pas exiger du créancier qu'il poursuive d'abord le débiteur et qu'il divise ses poursuites entre les cautions. »</p>
+  <p style="font-size:9pt;font-weight:bold;margin-bottom:10px;color:#333;">Le montant maximum de mon engagement de caution correspondant à trois années de loyers charges comprises.</p>
+  <div style="height:28px;border-bottom:1px solid #aaa;margin-bottom:2px;"></div>
+  <div style="height:28px;border-bottom:1px solid #aaa;margin-bottom:2px;"></div>
+  <div style="height:28px;border-bottom:1px solid #aaa;margin-bottom:2px;"></div>
+  <div style="height:28px;border-bottom:1px solid #aaa;margin-bottom:2px;"></div>
+  <div style="height:28px;border-bottom:1px solid #aaa;margin-bottom:2px;"></div>
+  <div style="height:28px;border-bottom:1px solid #aaa;margin-bottom:2px;"></div>
+  <div style="height:28px;border-bottom:1px solid #aaa;margin-bottom:2px;"></div>
+  <div style="height:28px;border-bottom:1px solid #aaa;margin-bottom:2px;"></div>
+  <div style="height:28px;border-bottom:1px solid #aaa;margin-bottom:2px;"></div>
+  <div style="height:28px;border-bottom:1px solid #aaa;"></div>
+</div>
+
+<p>Il est expressément entendu que le présent engagement de cautionnement est consenti pour toute la durée initiale du bail et par dérogation à l'article 1740 du Code civil pour deux renouvellements ou deux tacites reconductions éventuels et au maximum pour ${dureeMax} ans.</p>
+
+<p>Le présent engagement de la caution pourra être mis en jeu par le bailleur ou son mandataire par tout moyen à sa convenance et je m'engage à régler à première réquisition toute somme non payée par le locataire.</p>
+
+<p>Je m'engage à signaler tout changement de domicile au bailleur ou à son mandataire. En cas de mutation à titre onéreux ou gratuit de l'immeuble objet du présent engagement de caution, ce dernier se poursuivra de plein droit au bénéfice du nouveau bailleur dans tous ces termes et conditions, le nouveau bailleur devant toutefois me notifier la mutation intervenue.</p>
+
+<hr style="border:none;border-top:1px solid #ccc;margin:20px 0;">
+<p style="text-align:center;font-size:9pt;">Page 2 sur 2</p>
+
+<p>Je reconnais par ailleurs avoir connaissance des dispositions de l'article 22-1 al 7 de la loi n°89-462 du 6 juillet 1989 ci-dessous littéralement reproduites :</p>
+
+<p style="background:#f5f5f5;padding:10px 14px;font-size:9pt;font-style:italic;">Lorsque le cautionnement d'obligations résultant d'un contrat de location conclu en application du présent titre (titre I de la loi n° 89-462 du 6 juillet 1989) ne comporte aucune indication de durée ou lorsque la durée du cautionnement est stipulée indéterminée, la caution peut le résilier unilatéralement. La résiliation prend effet au terme du contrat de location, qu'il s'agisse du contrat initial ou d'un contrat reconduit ou renouvelé, au cours duquel le bailleur reçoit notification de la résiliation.</p>
+
+<p>Je sais néanmoins que je ne pourrai pas résilier le présent cautionnement avant l'expiration de la totalité de la durée pour laquelle il a été donné puisqu'il s'agit d'un cautionnement à durée déterminée.</p>
+
+<p>Mon engagement de caution sera définitivement éteint :</p>
+<ul style="padding-left:20px;margin-bottom:12px;">
+  ${entrants.map(p => {
+    const nomComp = [p.nom, p.prenom].filter(Boolean).join(' ') || '...';
+    return `<li>à la date d'effet du congé régulièrement délivré par ${nomComp} si un nouveau colocataire figure au bail,</li>
+  <li style="margin-top:6px;">dans le cas contraire, au plus tard à l'expiration d'un délai de six mois après la date d'effet du congé régulièrement délivré par ${nomComp}.</li>`;
+  }).join('<br>')}
+</ul>
+
+<p style="font-size:8.5pt;color:#333;margin-top:16px;">Les données à caractère personnel recueillies par Foncia font l'objet d'un traitement automatisé pour les besoins de la gestion des biens immobiliers et des clients, et la réalisation d'opérations relatives à la prospection.</p>
+<p style="font-size:8.5pt;color:#333;">De plus, Foncia peut être amené à transmettre vos données à des prestataires de services tiers dans le cadre de l'administration de certains services et de fonctionnalités. Ces derniers procéderont au traitement de données personnelles pour le compte de Foncia le cas échéant.</p>
+<p style="font-size:8.5pt;color:#333;">Nous partageons vos données avec l'ensemble des filiales d'Emeria Europe (anciennement FONCIA Groupe), afin de vous proposer des offres de services analogues à ceux que vous avez souscrits sur la base de notre intérêt légitime. De plus, en fonction de vos souhaits exprimés dans l'encadré ci-dessous, des partenaires d'Emeria Europe peuvent vous faire parvenir des offres de services.</p>
+<p style="font-size:8.5pt;color:#333;">Elles seront conservées durant toute la durée de la relation commerciale et pendant une durée maximale de 5 ans à compter de la fin de la relation commerciale conformément à l'article 2224 du Code civil et à l'article L. 561-12 du Code monétaire et financier relatif à l'obligation de conservation des informations des clients dans le cadre de la lutte contre le blanchiment de capitaux et le financement du terrorisme. Les registres légaux tenus par Foncia doivent être conservés pendant dix ans (articles 53, 65 et 72 du décret du 20 juillet 1972).</p>
+<p style="font-size:8.5pt;color:#333;">Conformément à la loi n°78-17 du 6 janvier 1978 dans sa version en vigueur et au Règlement européen (UE) 2016/679, vous disposez notamment d'un droit d'accès, de rectification, de portabilité, de limitation et de suppression des informations vous concernant - à formuler auprès de Foncia en contactant directement le Délégué à la protection des données (DPO) à l'adresse mail suivante : dpo@foncia.com.</p>
+<p style="font-size:8.5pt;color:#333;">Vous disposez également du droit de faire une réclamation auprès de la CNIL, sur son site internet ou par voie postale CNIL - 3 Place de Fontenoy TSA 80715 - 75334 PARIS Cedex 07.</p>
+
+<div style="margin-top:16px;padding:10px 14px;border:1px solid #ccc;font-size:8.5pt;">
+  <span style="display:inline-block;width:13px;height:13px;border:1.5px solid #555;vertical-align:middle;margin-right:8px;"></span>
+  J'autorise Emeria Europe (anciennement FONCIA Groupe) à transférer mes données à ses partenaires afin qu'ils me fassent parvenir des informations sur leurs produits et services.
+</div>
+
+<p style="font-size:8pt;color:#666;margin-top:12px;">Veuillez lire notre Charte de Protection des Données pour prendre connaissance de la façon dont nous traitons vos données personnelles et des droits que vous pouvez exercer sur vos données.</p>
+
+<div style="margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+  <div style="border:1px solid #ccc;padding:10px 12px;border-radius:4px;">
+    <div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:0.08em;color:#777;margin-bottom:3px;">La caution</div>
+    <div style="font-weight:bold;font-size:10pt;">${b(cautionLabel,'Caution')}</div>
+    <div style="font-size:8pt;color:#555;font-style:italic;margin-bottom:6px;">Signature précédée de la mention manuscrite</div>
+    <div style="height:52px;border-bottom:1.5px solid #999;"></div>
+  </div>
+  <div style="border:1px solid #ccc;padding:10px 12px;border-radius:4px;background:#f0f3fa;">
+    <div style="font-size:7.5pt;text-transform:uppercase;letter-spacing:0.08em;color:#777;margin-bottom:3px;">Le mandataire</div>
+    <div style="font-weight:bold;font-size:10pt;">FONCIA CENTRE VAL-DE-LOIRE</div>
+    <div style="font-size:8pt;color:#555;font-style:italic;margin-bottom:6px;">M. GIROUD Michaël / M. BILLET Gatien</div>
+    <div style="height:52px;border-bottom:1.5px solid #999;"></div>
+  </div>
+</div>
+  `;
+}
+
+function printCaution() {
+  const html = document.getElementById('caution-content').innerHTML;
+  const win = window.open('', '_blank', 'width=780,height=1000');
+  win.document.write(`<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="UTF-8">
+<title>Acte de cautionnement</title>
+<style>
+  @page { margin: 16mm 18mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Georgia, serif; font-size: 10pt; line-height: 1.65; color: #111; }
+  p { margin-bottom: 10px; text-align: justify; }
+  h2 { text-align: center; font-size: 13pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  ul { padding-left: 20px; margin-bottom: 10px; }
+  li { margin-bottom: 4px; }
+  hr { border: none; border-top: 1px solid #ccc; margin: 16px 0; }
+  span[style*="color:#c00"] { color: #000 !important; font-style: normal !important; }
+</style>
+</head><body>${html}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); win.close(); }, 400);
+}
+
 // ========== FACTURE ==========
 function openFacture() {
+  // Valider que les entrants sont renseignés
+  if (!state.entrants.some(p => p.nom)) {
+    alert('Veuillez renseigner au moins un entrant avant de générer la facture.');
+    return;
+  }
   renderFacture();
   document.getElementById('modal-facture').classList.add('open');
 }
@@ -1423,6 +1909,8 @@ function renderFacture() {
   const today = new Date();
   const dateToday = `${String(today.getDate()).padStart(2,'0')}/${String(today.getMonth()+1).padStart(2,'0')}/${today.getFullYear()}`;
 
+  const numFacture = nextFactureNum();
+
   document.getElementById('facture-content').innerHTML = `
     <div class="fact-agency">
       <strong>Foncia ANJOU MAINE</strong>
@@ -1437,7 +1925,8 @@ function renderFacture() {
       </div>
       <div class="fact-date-lieu">
         Angers,<br>
-        Le ${dateToday}
+        Le ${dateToday}<br>
+        <span style="font-size:8.5pt;color:#666;font-weight:normal;">Réf. ${numFacture}</span>
       </div>
     </div>
 
@@ -1504,17 +1993,88 @@ function printFacture() {
 }
 
 // ========== PRINT ==========
-function printDoc() { window.print(); }
+// ========== VALIDATION AVANT IMPRESSION ==========
+function getMissingFields() {
+  const missing = [];
+  REQUIRED_FIELDS.forEach(f => {
+    if (!document.getElementById(f.id).value.trim()) missing.push(f.label);
+  });
+  if (!state.sortants.some(p => p.nom && p.prenom)) missing.push('Titulaire sortant (nom + prénom)');
+  if (!state.entrants.some(p => p.nom && p.prenom)) missing.push('Titulaire entrant (nom + prénom)');
+  return missing;
+}
+
+function showPrintWarning(missing, onConfirm) {
+  const overlay = document.getElementById('modal-print-warn');
+  const list = document.getElementById('print-warn-list');
+  list.innerHTML = missing.map(m => `<li>${m}</li>`).join('');
+  overlay.classList.add('open');
+  document.getElementById('btn-print-anyway').onclick = () => {
+    overlay.classList.remove('open');
+    onConfirm();
+  };
+  document.getElementById('btn-print-cancel').onclick = () => overlay.classList.remove('open');
+}
+
+function printDoc() {
+  const missing = getMissingFields();
+  if (missing.length) { showPrintWarning(missing, () => window.print()); return; }
+  window.print();
+}
+
+// ========== EXPORT / IMPORT JSON ==========
+function exportDossier() {
+  const data = getFormData();
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const lot = document.getElementById('lot').value || 'dossier';
+  const proprio = document.getElementById('proprio').value || '';
+  a.href = url;
+  a.download = `avenant_LOT${lot}${proprio ? '_' + proprio.replace(/\s+/g,'_') : ''}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importDossier() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const data = JSON.parse(evt.target.result);
+        applyData(data);
+        renderPersons('sortant'); renderPersons('entrant'); renderPersons('caution');
+        if (state.sortants.length >= 4) document.getElementById('btn-add-sortant').style.display = 'none';
+        if (state.entrants.length >= 4) document.getElementById('btn-add-entrant').style.display = 'none';
+        refresh(); updateTitle(); saveToLS();
+      } catch(err) {
+        alert('Fichier invalide. Veuillez sélectionner un fichier .json exporté depuis cet outil.');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
 
 document.addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'p') { e.preventDefault(); printDoc(); }
-  if (e.key === 'Escape') { closeModal(); closeFacture(); }
+  if (e.key === 'Escape') { closeModal(); closeFacture(); closeCaution(); closeHistoryModal(); document.getElementById('modal-print-warn')?.classList.remove('open'); }
 });
 
 // ========== INIT ==========
 function init() {
   const loaded = loadFromLS();
   if (!loaded || state.sortants.length === 0) {
+    // Nouveau dossier : pré-remplir avec la date du jour
+    const today = todayStr();
+    document.getElementById('date_effet').value = today;
+    document.getElementById('date_bail').value = today;
     addPerson('sortant');
     if (state.entrants.length === 0) addPerson('entrant');
   } else {
@@ -1523,12 +2083,14 @@ function init() {
     if (state.entrants.length >= 4) document.getElementById('btn-add-entrant').style.display = 'none';
   }
   renderProprios();
+  renderHistory();
   refresh();
   updateTitle();
   showSaved();
-  ['proprio','lot','date_effet','date_expiration','date_bail','adresse'].forEach(id => {
+  ['proprio','lot','date_effet','date_expiration','date_bail','adresse','loyer','charges','irl_trimestre','irl_valeur'].forEach(id => {
     document.getElementById(id).addEventListener('input', () => debounceSave());
   });
+  document.getElementById('notes-field')?.addEventListener('input', () => debounceSave());
 }
 
 init();
